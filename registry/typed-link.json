@@ -1,0 +1,17 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "typed-link",
+  "type": "registry:component",
+  "title": "Typed Link",
+  "files": [
+    {
+      "type": "registry:component",
+      "path": "registry/default/typed-link.tsx",
+      "content": "import type { LinkRestProps } from \"next/link\";\nimport Link from \"next/link\";\nimport type { ParamMap } from \"@/.next/types/routes\";\n\ntype _Href = keyof ParamMap;\n\n// If the ParamMap entry is an empty object, params is omitted; otherwise required.\nexport type TypedLinkProps<H extends _Href = _Href> = LinkRestProps &\n  (ParamMap[H] extends Record<string, never>\n    ? { href: H; params?: undefined }\n    : { href: H; params: ParamMap[H] });\n\nconst dynamicSegmentRegex = /\\[(\\.\\.\\.)?([A-Za-z0-9_]+)\\]/g;\nconst unresolvedBracketsRegex = /\\[|\\]/;\n\nfunction buildDynamicHref<H extends _Href>(\n  pattern: H,\n  params: ParamMap[H],\n): string {\n  if (!params || Object.keys(params as object).length === 0) {\n    return pattern as string;\n  }\n  const missing: string[] = [];\n  const result = (pattern as string).replace(\n    dynamicSegmentRegex,\n    (match, dots: string | undefined, name: string) => {\n      const value = (params as Record<string, unknown>)[name];\n      if (dots) {\n        if (!Array.isArray(value)) {\n          throw new Error(\n            `Expected catch-all param \"${name}\" to be string[] for route ${pattern}`,\n          );\n        }\n        if (value.length === 0) {\n          missing.push(name);\n          return match;\n        }\n        return value.map((v) => encodeURIComponent(String(v))).join(\"/\");\n      }\n      if (value == null || Array.isArray(value)) {\n        missing.push(name);\n        return match;\n      }\n      return encodeURIComponent(String(value));\n    },\n  );\n  if (missing.length > 0) {\n    throw new Error(\n      `Missing required route param(s): ${missing.join(\", \")} for pattern ${pattern}`,\n    );\n  }\n  if (unresolvedBracketsRegex.test(result)) {\n    throw new Error(\n      `Unresolved dynamic segment(s) remain in built href: ${result}`,\n    );\n  }\n  return result;\n}\n\n/**\n * TypedLink is a type-safe wrapper around Next.js's Link component.\n * It enforces route param correctness using your project's ParamMap type.\n *\n * ## Usage\n * - For static routes (no params): pass `href` as the route key.\n * - For dynamic routes: pass `href` and a `params` object matching the route's param shape.\n *\n * Example:\n * ```tsx\n * // Static route\n * <TypedLink href=\"/about\" />\n *\n * // Dynamic route (e.g. /user/[id])\n * <TypedLink href=\"/user/[id]\" params={{ id: \"123\" }} />\n *\n * // Catch-all route (e.g. /blog/[...slug])\n * <TypedLink href=\"/blog/[...slug]\" params={{ slug: [\"2025\", \"pricing\"] }} />\n * ```\n *\n * This component automatically builds the correct href string and throws\n * if required params are missing or malformed.\n *\n * See also: useRouter custom implementation for programmatic navigation with type safety.\n */\nexport function TypedLink<H extends _Href>(props: TypedLinkProps<H>) {\n  const { href, params, ...rest } = props as TypedLinkProps<_Href> & {\n    href: H;\n  };\n  const built: string = ((): string => {\n    if (params !== undefined) {\n      return buildDynamicHref(href as H, params as ParamMap[H]);\n    }\n    return href as string;\n  })();\n  return <Link href={built as never} {...rest} />;\n}\n"
+    }
+  ],
+  "author": "Diecodev (https://dieco.dev)",
+  "dependencies": [
+    "next@latest"
+  ]
+}

@@ -98,6 +98,9 @@ Resulting JSON schemas embed the latest source code so consumers can add via raw
 ## Demos
 
 
+https://github.com/user-attachments/assets/3fc6ce95-dca9-4ac8-aba7-7a4877142c4c
+
+
 ---
 
 ## Notes
